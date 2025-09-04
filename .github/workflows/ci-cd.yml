@@ -22,7 +22,7 @@ jobs:
         run: |
           echo "Running unit tests..."
           pip install pytest
-          pytest tests/ || exit 0   # Continue even if no tests for learning
+          pytest tests/ || exit 0   # Continue even if no tests exist
 
   deploy:
     needs: build-and-test
@@ -46,7 +46,7 @@ jobs:
           docker tag ${{ secrets.DOCKER_USERNAME }}/ci-cd-demo:${{ matrix.env }} ${{ secrets.DOCKER_USERNAME }}/ci-cd-demo:previous || true
           docker push ${{ secrets.DOCKER_USERNAME }}/ci-cd-demo:${{ matrix.env }}
 
-      - name: Deploy Container & Smoke Test
+      - name: Deploy Container
         run: |
           # Map environment to port
           if [ "${{ matrix.env }}" = "dev" ]; then
@@ -67,9 +67,10 @@ jobs:
           docker run -d -p $PORT:$PORT -e APP_PORT=$PORT --name ${{ matrix.env }} \
             ${{ secrets.DOCKER_USERNAME }}/ci-cd-demo:${{ matrix.env }}
 
-          # Smoke test
-          echo "Testing ${{ matrix.env }} environment..."
-          if ! curl -f http://localhost:$PORT; then
+      - name: Smoke Test
+        run: |
+          echo "Testing ${{ matrix.env }} environment inside container..."
+          if ! docker exec ${{ matrix.env }} curl -f http://localhost:$PORT; then
             echo "Deployment failed, rolling back..."
             docker stop ${{ matrix.env }} || true
             docker rm ${{ matrix.env }} || true
