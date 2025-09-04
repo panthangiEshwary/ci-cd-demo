@@ -46,12 +46,18 @@ jobs:
           docker tag ${{ secrets.DOCKER_USERNAME }}/ci-cd-demo:${{ matrix.env }} ${{ secrets.DOCKER_USERNAME }}/ci-cd-demo:previous || true
           docker push ${{ secrets.DOCKER_USERNAME }}/ci-cd-demo:${{ matrix.env }}
 
-      - name: Deploy Container
+      - name: Deploy Container & Smoke Test
         run: |
           # Map environment to port
-          if [ "${{ matrix.env }}" = "dev" ]; then PORT=5001
-          elif [ "${{ matrix.env }}" = "staging" ]; then PORT=5002
-          else PORT=5003; fi
+          if [ "${{ matrix.env }}" = "dev" ]; then
+            PORT=5001
+          elif [ "${{ matrix.env }}" = "staging" ]; then
+            PORT=5002
+          else
+            PORT=5003
+          fi
+
+          echo "Deploying ${{ matrix.env }} on port $PORT"
 
           # Stop and remove previous container
           docker stop ${{ matrix.env }} || true
@@ -61,8 +67,7 @@ jobs:
           docker run -d -p $PORT:$PORT --env-file .env.${{ matrix.env }} --name ${{ matrix.env }} \
             ${{ secrets.DOCKER_USERNAME }}/ci-cd-demo:${{ matrix.env }}
 
-      - name: Smoke Test
-        run: |
+          # Smoke test
           echo "Testing ${{ matrix.env }} environment..."
           if ! curl -f http://localhost:$PORT; then
             echo "Deployment failed, rolling back..."
