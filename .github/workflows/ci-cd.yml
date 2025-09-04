@@ -6,7 +6,7 @@ on:
 
 jobs:
   build-and-test:
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
       - name: Set up Python
@@ -20,7 +20,7 @@ jobs:
 
   deploy:
     needs: build-and-test
-    runs-on: self-hosted   # 👈 must also run on your own runner (not ubuntu-latest)
+    runs-on: ubuntu-latest
     strategy:
       matrix:
         env: [dev, staging, prod]
