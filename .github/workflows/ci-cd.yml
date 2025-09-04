@@ -6,7 +6,7 @@ on:
 
 jobs:
   build-and-test:
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     steps:
       - uses: actions/checkout@v3
       - name: Set up Python
@@ -20,23 +20,40 @@ jobs:
 
   deploy:
     needs: build-and-test
-    runs-on: ubuntu-latest
+    runs-on: self-hosted   # 👈 must also run on your own runner (not ubuntu-latest)
     strategy:
       matrix:
         env: [dev, staging, prod]
     steps:
       - uses: actions/checkout@v3
+
       - name: Login to Docker Hub
         uses: docker/login-action@v2
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
+
       - name: Build and Push Docker Image
         run: |
           docker build -t ${{ secrets.DOCKER_USERNAME }}/ci-cd-demo:${{ matrix.env }} .
           docker push ${{ secrets.DOCKER_USERNAME }}/ci-cd-demo:${{ matrix.env }}
+
       - name: Deploy Container
         run: |
-          docker run -d -p $((matrix.env == 'dev' ? 5001 : matrix.env == 'staging' ? 5002 : 5003)) \
-          --name ${{ matrix.env }} ${{ secrets.DOCKER_USERNAME }}/ci-cd-demo:${{ matrix.env }}
+          # Decide port based on environment
+          if [ "${{ matrix.env }}" = "dev" ]; then
+            PORT=5001
+          elif [ "${{ matrix.env }}" = "staging" ]; then
+            PORT=5002
+          else
+            PORT=5003
+          fi
+
+          # Stop/remove old container if exists
+          docker stop ${{ matrix.env }} || true
+          docker rm ${{ matrix.env }} || true
+
+          # Run new container
+          docker run -d -p $PORT:5000 --name ${{ matrix.env }} \
+            ${{ secrets.DOCKER_USERNAME }}/ci-cd-demo:${{ matrix.env }}
 
