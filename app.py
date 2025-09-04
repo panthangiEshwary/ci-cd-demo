@@ -11,3 +11,4 @@ def hello():
 if __name__ == "__main__":
     # Must bind to 0.0.0.0 so Docker can reach it
     app.run(host="0.0.0.0", port=port)
+
