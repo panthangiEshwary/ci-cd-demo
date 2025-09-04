@@ -22,7 +22,7 @@ jobs:
         run: |
           echo "Running unit tests..."
           pip install pytest
-          pytest tests/ || exit 0   # Continue even if no tests exist
+          pytest tests/ || exit 0
 
   deploy:
     needs: build-and-test
@@ -46,35 +46,39 @@ jobs:
           docker tag ${{ secrets.DOCKER_USERNAME }}/ci-cd-demo:${{ matrix.env }} ${{ secrets.DOCKER_USERNAME }}/ci-cd-demo:previous || true
           docker push ${{ secrets.DOCKER_USERNAME }}/ci-cd-demo:${{ matrix.env }}
 
-      - name: Deploy Container
+      - name: Deploy Container & Smoke Test
         run: |
-          # Map environment to port
+          # Map environment to host port
           if [ "${{ matrix.env }}" = "dev" ]; then
-            PORT=5001
+            HOST_PORT=5001
           elif [ "${{ matrix.env }}" = "staging" ]; then
-            PORT=5002
+            HOST_PORT=5002
           else
-            PORT=5003
+            HOST_PORT=5003
           fi
 
-          echo "Deploying ${{ matrix.env }} on port $PORT"
+          CONTAINER_PORT=5000
 
-          # Stop and remove previous container
+          echo "Deploying ${{ matrix.env }} on host port $HOST_PORT -> container port $CONTAINER_PORT"
+
+          # Stop & remove previous container
           docker stop ${{ matrix.env }} || true
           docker rm ${{ matrix.env }} || true
 
-          # Run new container with correct port
-          docker run -d -p $PORT:$PORT -e APP_PORT=$PORT --name ${{ matrix.env }} \
+          # Run new container
+          docker run -d -p $HOST_PORT:$CONTAINER_PORT -e APP_PORT=$CONTAINER_PORT --name ${{ matrix.env }} \
             ${{ secrets.DOCKER_USERNAME }}/ci-cd-demo:${{ matrix.env }}
 
-      - name: Smoke Test
-        run: |
-          echo "Testing ${{ matrix.env }} environment inside container..."
-          if ! docker exec ${{ matrix.env }} curl -f http://localhost:$PORT; then
+          # Wait a few seconds for container to start
+          sleep 5
+
+          # Smoke test from host
+          echo "Testing ${{ matrix.env }} environment..."
+          if ! curl -f http://localhost:$HOST_PORT; then
             echo "Deployment failed, rolling back..."
             docker stop ${{ matrix.env }} || true
             docker rm ${{ matrix.env }} || true
-            docker run -d -p $PORT:$PORT -e APP_PORT=$PORT --name ${{ matrix.env }} \
+            docker run -d -p $HOST_PORT:$CONTAINER_PORT -e APP_PORT=$CONTAINER_PORT --name ${{ matrix.env }} \
               ${{ secrets.DOCKER_USERNAME }}/ci-cd-demo:previous
             exit 1
           fi
