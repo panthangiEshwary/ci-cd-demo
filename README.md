@@ -1,4 +1,4 @@
-A simple Python application demonstrating CI/CD with Docker and GitHub Actions. The project supports multiple environments (dev, staging, prod) and uses environment files for configuration.
+**A simple Python application demonstrating CI/CD with Docker and GitHub Actions. The project supports multiple environments (dev, staging, prod) and uses environment files for configuration.**
 
 **Features**
 Python application (app.py) running on Flask (or similar).
