@@ -63,8 +63,8 @@ jobs:
           docker stop ${{ matrix.env }} || true
           docker rm ${{ matrix.env }} || true
 
-          # Run new container with correct port and environment
-          docker run -d -p $PORT:$PORT --env-file .env.${{ matrix.env }} --name ${{ matrix.env }} \
+          # Run new container with correct port
+          docker run -d -p $PORT:$PORT -e APP_PORT=$PORT --name ${{ matrix.env }} \
             ${{ secrets.DOCKER_USERNAME }}/ci-cd-demo:${{ matrix.env }}
 
           # Smoke test
@@ -73,7 +73,8 @@ jobs:
             echo "Deployment failed, rolling back..."
             docker stop ${{ matrix.env }} || true
             docker rm ${{ matrix.env }} || true
-            docker run -d -p $PORT:$PORT --env-file .env.${{ matrix.env }} --name ${{ matrix.env }} \
+            docker run -d -p $PORT:$PORT -e APP_PORT=$PORT --name ${{ matrix.env }} \
               ${{ secrets.DOCKER_USERNAME }}/ci-cd-demo:previous
             exit 1
           fi
+
